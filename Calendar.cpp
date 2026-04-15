@@ -1,11 +1,16 @@
 #include "Calendar.h"
 
 #include <iostream>
+#include <utility>
 
 Calendar::Calendar() : mRoot(nullptr) {
 }
 
 Calendar::Calendar(Calendar const& cal) : mRoot(CloneTree(cal.mRoot)) {
+}
+
+Calendar::Calendar(Calendar&& cal) noexcept : mRoot(cal.mRoot) {
+    cal.mRoot = nullptr;
 }
 
 Calendar::~Calendar() {
@@ -23,6 +28,17 @@ Calendar& Calendar::operator=(Calendar const& cal) {
     return *this;
 }
 
+Calendar& Calendar::operator=(Calendar&& cal) noexcept {
+    if (this == &cal) {
+        return *this;
+    }
+
+    Clear();
+    mRoot = cal.mRoot;
+    cal.mRoot = nullptr;
+    return *this;
+}
+
 void Calendar::AddEntry(Date const& date, std::string const& text) {
     AddOrReplaceEntry(mRoot, date, text);
 }
@@ -32,12 +48,16 @@ void Calendar::Clear() {
     mRoot = nullptr;
 }
 
-void Calendar::PrintAllEntries(bool const ascending) const {
+void Calendar::PrintAllEntries(bool ascending) const {
     if (ascending) {
         PrintInOrder(mRoot);
     } else {
         PrintReverseOrder(mRoot);
     }
+}
+
+void Calendar::swap(Calendar& other) noexcept {
+    std::swap(mRoot, other.mRoot);
 }
 
 Calendar::CalendarEntry* Calendar::CloneTree(CalendarEntry const* node) {

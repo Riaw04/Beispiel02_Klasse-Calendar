@@ -9,13 +9,16 @@ class Calendar {
 public:
     Calendar();
     Calendar(Calendar const& cal);
+    Calendar(Calendar&& cal) noexcept;
     ~Calendar();
 
     Calendar& operator=(Calendar const& cal);
+    Calendar& operator=(Calendar&& cal) noexcept;
 
     void AddEntry(Date const& date, std::string const& text);
     void Clear();
-    void PrintAllEntries(bool const ascending = true) const;
+    void PrintAllEntries(bool ascending = true) const;
+    void swap(Calendar& other) noexcept;
 
 private:
     struct CalendarEntry {

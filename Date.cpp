@@ -11,19 +11,19 @@ Date::Date(size_t day, size_t month, size_t year)
     }
 }
 
-size_t Date::getDay() const {
+size_t Date::getDay() const noexcept {
     return mDay;
 }
 
-size_t Date::getMonth() const {
+size_t Date::getMonth() const noexcept {
     return mMonth;
 }
 
-size_t Date::getYear() const {
+size_t Date::getYear() const noexcept {
     return mYear;
 }
 
-int Date::Compare(Date const& d) const {
+int Date::Compare(Date const& d) const noexcept {
     if (mYear < d.mYear) {
         return -1;
     }
@@ -54,11 +54,11 @@ void Date::Print(std::ostream& out) const {
         << mYear;
 }
 
-bool Date::IsLeapYear(size_t year) {
+bool Date::IsLeapYear(size_t year) noexcept {
     return (year % 400 == 0) || ((year % 4 == 0) && (year % 100 != 0));
 }
 
-size_t Date::DaysInMonth(size_t month, size_t year) {
+size_t Date::DaysInMonth(size_t month, size_t year) noexcept {
     switch (month) {
         case 1:
         case 3:
@@ -80,7 +80,7 @@ size_t Date::DaysInMonth(size_t month, size_t year) {
     }
 }
 
-bool Date::IsValidDate(size_t day, size_t month, size_t year) {
+bool Date::IsValidDate(size_t day, size_t month, size_t year) noexcept {
     if (year == 0 || month < 1 || month > 12) {
         return false;
     }
