@@ -1,2 +1,15 @@
 *.o
 calendar_demo
+
+# Visual Studio user and build artifacts
+.vs/
+*.VC.db
+*.VC.opendb
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+build/
+x64/
+Debug/
+Release/
