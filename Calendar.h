@@ -4,6 +4,7 @@
 #include "Date.h"
 
 #include <string>
+#include <vector>
 
 class Calendar {
 public:
@@ -18,6 +19,7 @@ public:
     void AddEntry(Date const& date, std::string const& text);
     void Clear();
     void PrintAllEntries(bool ascending = true) const;
+    std::vector<Date> FindByText(std::string const& searchText) const;
     void swap(Calendar& other) noexcept;
 
 private:
@@ -39,6 +41,8 @@ private:
     static void AddOrReplaceEntry(CalendarEntry*& node, Date const& date, std::string const& text);
     static void PrintInOrder(CalendarEntry const* node);
     static void PrintReverseOrder(CalendarEntry const* node);
+    static void CollectByText(CalendarEntry const* node, std::string const& searchLower, std::vector<Date>& result);
+    static std::string ToLower(std::string const& input);
 };
 
 #endif
