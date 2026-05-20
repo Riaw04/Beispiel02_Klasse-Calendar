@@ -7,56 +7,42 @@
 
 #include "Calendar.h"
 
-#include <chrono>
+#include <cassert>
 #include <iostream>
 #include <sstream>
 
-using Clock = std::chrono::high_resolution_clock;
-
-// ==========================
-// Benchmarks
-// ==========================
-
-#include <numeric>
-
-volatile int sink = 0;
-
-template <typename Func>
-long long Measure(Func f, int repeats = 5) {
-    using namespace std::chrono;
-
-    long long total = 0;
-
-    for (int i = 0; i < repeats; ++i) {
-        auto start = high_resolution_clock::now();
-        f();
-        auto end = high_resolution_clock::now();
-
-        total += duration_cast<microseconds>(end - start).count();
+static void PrintFound(std::vector<Date> const& dates) {
+    for (Date const& date : dates) {
+        std::cout << "  -> " << date << '\n';
     }
-
-    return total / repeats;
 }
 
-// Insert n elements
-void BenchmarkInsert(int n) {
-    auto time = Measure([&]() {
-        Calendar cal;
-        for (int i = 1; i <= n; ++i) {
-            cal.AddEntry(Date((i % 28) + 1, (i % 12) + 1, 2026), "X");
-        }
-        sink += n;
-        });
+int main() {
+    try {
+        std::cout << "=== Date Tests ===\n";
 
-    std::cout << "Insert " << n << ": " << time << " us\n";
-}
+        // Construct a few valid sample dates and verify comparison behavior.
+        Date d1(1, 1, 2025);
+        Date d2(2, 1, 2025);
+        Date d3(2, 2, 2024);
 
-// Insert in reverse order (tests worst-case behavior)
-void BenchmarkReverseInsert(int n) {
-    auto time = Measure([&]() {
-        Calendar cal;
-        for (int i = n; i >= 1; --i) {
-            cal.AddEntry(Date((i % 28) + 1, (i % 12) + 1, 2026), "X");
+        std::cout << "d1 = " << d1 << '\n';
+        std::cout << "d2 = " << d2 << '\n';
+        std::cout << "d3 = " << d3 << '\n';
+
+        std::cout << "Compare d1 with d2: " << d1.Compare(d2) << " (expected -1)\n";
+        std::cout << "Compare d2 with d1: " << d2.Compare(d1) << " (expected +1)\n";
+        std::cout << "Compare d2 with d2: " << d2.Compare(d2) << " (expected 0)\n";
+        assert(d1.Compare(d2) < 0);
+        assert(d2.Compare(d1) > 0);
+        assert(d2.Compare(d2) == 0);
+
+        // Demonstrate validation: this invalid date must throw an exception.
+        try {
+            Date invalid(31, 2, 2025);
+            std::cout << "ERROR: invalid date accepted: " << invalid << '\n';
+        } catch (std::invalid_argument const&) {
+            std::cout << "Invalid date check passed.\n";
         }
         sink += n;
         });
@@ -170,12 +156,29 @@ int main() {
         cal.AddEntry(Date(1, 1, 2025), "Year Start");
         cal.PrintAllEntries(true);
 
-        // ------------------------------------------------------------
-        // 7. Copy constructor deep copy test
-        // ------------------------------------------------------------
-        std::cout << "\n[7] Copy constructor test (independence check):\n";
-        Calendar copy(cal);
-        copy.AddEntry(Date(30, 6, 2027), "Only in copy");
+        std::cout << "\nFindByText tests...\n";
+        std::vector<Date> match1 = cal.FindByText("jahr");
+        std::cout << "Suche nach 'jahr' (case-insensitive), Treffer: " << match1.size() << '\n';
+        PrintFound(match1);
+        assert(match1.size() == 1);
+
+        std::vector<Date> match2 = cal.FindByText("ARZT");
+        std::cout << "Suche nach 'ARZT', Treffer: " << match2.size() << '\n';
+        PrintFound(match2);
+        assert(match2.size() == 1);
+
+        std::vector<Date> match3 = cal.FindByText("nicht-vorhanden");
+        std::cout << "Suche nach 'nicht-vorhanden', Treffer: " << match3.size() << '\n';
+        assert(match3.empty());
+
+        std::vector<Date> match4 = cal.FindByText("");
+        std::cout << "Suche nach leerem Text, Treffer: " << match4.size() << '\n';
+        assert(match4.empty());
+
+        // Verify deep copy semantics of the copy constructor.
+        std::cout << "\nCopy constructor test...\n";
+        Calendar copied(cal);
+        copied.AddEntry(Date(31, 12, 2026), "Silvesterparty");
 
         std::cout << "Original calendar:\n";
         cal.PrintAllEntries(true);
@@ -193,19 +196,36 @@ int main() {
         assigned = cal;
         assigned.PrintAllEntries(true);
 
-        // ------------------------------------------------------------
-        // 9. Self-assignment safety test
-        // ------------------------------------------------------------
-        std::cout << "\n[9] Self-assignment test:\n";
-        assigned = assigned;
+        std::cout << "\nMove constructor test...\n";
+        Calendar movedConstructed(std::move(assigned));
+        std::cout << "Moved-to calendar:\n";
+        movedConstructed.PrintAllEntries(true);
+        std::cout << "Moved-from calendar (should be empty):\n";
         assigned.PrintAllEntries(true);
 
-        // ------------------------------------------------------------
-        // 10. Clear functionality test
-        // ------------------------------------------------------------
-        std::cout << "\n[10] Clear calendar:\n";
-        assigned.Clear();
-        assigned.PrintAllEntries(true);
+        std::cout << "\nMove assignment and swap test...\n";
+        Calendar moveAssigned;
+        moveAssigned = std::move(movedConstructed);
+        std::cout << "After move assignment:\n";
+        moveAssigned.PrintAllEntries(true);
+
+        Calendar other;
+        other.AddEntry(Date(11, 11, 2040), "Eintrag in anderem Kalender");
+        std::cout << "Before swap - moveAssigned:\n";
+        moveAssigned.PrintAllEntries(true);
+        std::cout << "Before swap - other:\n";
+        other.PrintAllEntries(true);
+        moveAssigned.swap(other);
+        std::cout << "After swap - moveAssigned:\n";
+        moveAssigned.PrintAllEntries(true);
+        std::cout << "After swap - other:\n";
+        other.PrintAllEntries(true);
+
+        // Clear all entries and confirm the calendar is empty.
+        std::cout << "\nClear test...\n";
+        other.Clear();
+        std::cout << "After Clear (should be empty):\n";
+        other.PrintAllEntries(true);
 
         // ------------------------------------------------------------
         // 11. Reuse after clear

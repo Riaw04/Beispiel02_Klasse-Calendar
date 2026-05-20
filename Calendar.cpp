@@ -8,6 +8,7 @@
 #include "Calendar.h"
 
 #include <iostream>
+#include <cctype>
 #include <utility>
 
 Calendar::Calendar() : mRoot(nullptr) {} // Default constructor initializes an empty calendar.
@@ -53,6 +54,17 @@ void Calendar::PrintAllEntries(bool ascending) const {
     else {
         PrintReverseOrder(mRoot);   // largest ? smallest
     }
+}
+
+std::vector<Date> Calendar::FindByText(std::string const& searchText) const {
+    std::vector<Date> result;
+    const std::string searchLower = ToLower(searchText);
+    if (searchLower.empty()) {
+        return result;
+    }
+
+    CollectByText(mRoot, searchLower, result);
+    return result;
 }
 
 void Calendar::swap(Calendar& other) noexcept {
@@ -120,7 +132,28 @@ void Calendar::PrintReverseOrder(CalendarEntry const* node) {
         return; // base case
     }
 
-    PrintReverseOrder(node->right); // right subtree first
-    std::cout << node->date << " : " << node->text << '\n'; // visit node
-    PrintReverseOrder(node->left); // then left subtree
+    PrintReverseOrder(node->right);
+    std::cout << node->date << " : " << node->text << '\n';
+    PrintReverseOrder(node->left);
+}
+
+void Calendar::CollectByText(CalendarEntry const* node, std::string const& searchLower, std::vector<Date>& result) {
+    if (node == nullptr) {
+        return;
+    }
+
+    CollectByText(node->left, searchLower, result);
+    if (ToLower(node->text).find(searchLower) != std::string::npos) {
+        result.push_back(node->date);
+    }
+    CollectByText(node->right, searchLower, result);
+}
+
+std::string Calendar::ToLower(std::string const& input) {
+    std::string lowered;
+    lowered.reserve(input.size());
+    for (char ch : input) {
+        lowered.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(ch))));
+    }
+    return lowered;
 }
