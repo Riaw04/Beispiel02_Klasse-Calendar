@@ -1,59 +1,58 @@
+// ==========================
+// File: Calendar.cpp
+// Author: Niklas Riepl 
+// Date: 13/04/2026
+// Description: Implementation of the Calendar class.
+// ==========================
+
 #include "Calendar.h"
 
 #include <iostream>
 #include <cctype>
 #include <utility>
 
-Calendar::Calendar() : mRoot(nullptr) {
-}
-
-Calendar::Calendar(Calendar const& cal) : mRoot(CloneTree(cal.mRoot)) {
-}
-
-Calendar::Calendar(Calendar&& cal) noexcept : mRoot(cal.mRoot) {
-    cal.mRoot = nullptr;
-}
-
-Calendar::~Calendar() {
-    Clear();
-}
+Calendar::Calendar() : mRoot(nullptr) {} // Default constructor initializes an empty calendar.
+Calendar::Calendar(Calendar const& cal) : mRoot(CloneTree(cal.mRoot)) {} // Copy constructor creates a deep copy of the calendar.
+Calendar::Calendar(Calendar&& cal) noexcept : mRoot(cal.mRoot) { cal.mRoot = nullptr; } // Move constructor takes ownership of the resources from the source calendar and leaves it in a valid but empty state.
+Calendar::~Calendar() { Clear(); } // Destructor cleans up all allocated memory by deleting the entire tree.
 
 Calendar& Calendar::operator=(Calendar const& cal) {
     if (this == &cal) {
-        return *this;
+        return *this; // handle self-assignment
     }
 
-    CalendarEntry* newRoot = CloneTree(cal.mRoot);
-    DeleteTree(mRoot);
-    mRoot = newRoot;
+    CalendarEntry* newRoot = CloneTree(cal.mRoot); // deep copy source tree
+    DeleteTree(mRoot); // free current data
+    mRoot = newRoot;   // assign new copy
     return *this;
 }
 
 Calendar& Calendar::operator=(Calendar&& cal) noexcept {
     if (this == &cal) {
-        return *this;
+        return *this; // handle self-move (rare but safe)
     }
 
-    Clear();
-    mRoot = cal.mRoot;
-    cal.mRoot = nullptr;
+    Clear();              // release current resources
+    mRoot = cal.mRoot;    // steal pointer
+    cal.mRoot = nullptr;  // leave source in valid empty state
     return *this;
 }
 
 void Calendar::AddEntry(Date const& date, std::string const& text) {
-    AddOrReplaceEntry(mRoot, date, text);
+    AddOrReplaceEntry(mRoot, date, text); // insert or update entry
 }
 
 void Calendar::Clear() {
-    DeleteTree(mRoot);
-    mRoot = nullptr;
+    DeleteTree(mRoot); // delete entire tree
+    mRoot = nullptr;   // reset root
 }
 
 void Calendar::PrintAllEntries(bool ascending) const {
     if (ascending) {
-        PrintInOrder(mRoot);
-    } else {
-        PrintReverseOrder(mRoot);
+        PrintInOrder(mRoot);        // smallest ? largest
+    }
+    else {
+        PrintReverseOrder(mRoot);   // largest ? smallest
     }
 }
 
@@ -69,70 +68,68 @@ std::vector<Date> Calendar::FindByText(std::string const& searchText) const {
 }
 
 void Calendar::swap(Calendar& other) noexcept {
-    std::swap(mRoot, other.mRoot);
+    std::swap(mRoot, other.mRoot); // constant-time swap
 }
 
 Calendar::CalendarEntry* Calendar::CloneTree(CalendarEntry const* node) {
     if (node == nullptr) {
-        return nullptr;
+        return nullptr; // base case
     }
 
-    // Build a deep copy of the subtree. If cloning one of the children fails,
-    // we clean up the already allocated memory and rethrow the exception.
+    // Create copy of current node
     CalendarEntry* cloned = new CalendarEntry(node->date, node->text);
     try {
-        cloned->left = CloneTree(node->left);
-        cloned->right = CloneTree(node->right);
+        cloned->left = CloneTree(node->left);   // copy left subtree
+        cloned->right = CloneTree(node->right); // copy right subtree
         return cloned;
-    } catch (...) {
-        DeleteTree(cloned);
+    }
+    catch (...) {
+        DeleteTree(cloned); // clean up partial copy on failure
         throw;
     }
 }
 
 void Calendar::DeleteTree(CalendarEntry* node) {
     if (node == nullptr) {
-        return;
+        return; // base case
     }
 
-    DeleteTree(node->left);
-    DeleteTree(node->right);
-    delete node;
+    DeleteTree(node->left);   // delete left subtree
+    DeleteTree(node->right);  // delete right subtree
+    delete node;              // delete current node
 }
 
 void Calendar::AddOrReplaceEntry(CalendarEntry*& node, Date const& date, std::string const& text) {
     if (node == nullptr) {
-        // Create a new node when we reach an empty position in the BST.
-        node = new CalendarEntry(date, text);
+        node = new CalendarEntry(date, text); // insert new node
         return;
     }
 
     const int cmp = date.Compare(node->date);
     if (cmp == 0) {
-        // Same date means we replace the existing description.
-        node->text = text;
-    } else if (cmp < 0) {
-        // Earlier dates are stored in the left subtree.
-        AddOrReplaceEntry(node->left, date, text);
-    } else {
-        // Later dates are stored in the right subtree.
-        AddOrReplaceEntry(node->right, date, text);
+        node->text = text; // replace existing entry
+    }
+    else if (cmp < 0) {
+        AddOrReplaceEntry(node->left, date, text); // go left
+    }
+    else {
+        AddOrReplaceEntry(node->right, date, text); // go right
     }
 }
 
 void Calendar::PrintInOrder(CalendarEntry const* node) {
     if (node == nullptr) {
-        return;
+        return; // base case
     }
 
-    PrintInOrder(node->left);
-    std::cout << node->date << " : " << node->text << '\n';
-    PrintInOrder(node->right);
+    PrintInOrder(node->left); // left subtree
+    std::cout << node->date << " : " << node->text << '\n'; // visit node
+    PrintInOrder(node->right); // right subtree
 }
 
 void Calendar::PrintReverseOrder(CalendarEntry const* node) {
     if (node == nullptr) {
-        return;
+        return; // base case
     }
 
     PrintReverseOrder(node->right);

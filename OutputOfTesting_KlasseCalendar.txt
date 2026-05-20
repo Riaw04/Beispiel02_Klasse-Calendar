@@ -1,0 +1,81 @@
+[1] Empty calendar:
+
+[2] Basic insertion (unordered input -> sorted output):
+24.12.2025 : C
+01.01.2026 : D
+01.05.2026 : B
+15.05.2026 : A
+
+[3] Descending order view:
+15.05.2026 : A
+01.05.2026 : B
+01.01.2026 : D
+24.12.2025 : C
+
+[4] Replace existing entry (same date update):
+24.12.2025 : C
+01.01.2026 : Updated
+01.05.2026 : B
+15.05.2026 : A
+
+[5] Multiple overwrites on same date:
+24.12.2025 : C
+01.01.2026 : Updated
+01.05.2026 : B
+15.05.2026 : A
+10.10.2026 : Final
+
+[6] Boundary dates test:
+01.01.2025 : Year Start
+24.12.2025 : C
+01.01.2026 : Updated
+01.05.2026 : B
+15.05.2026 : A
+10.10.2026 : Final
+31.12.2026 : Year End
+
+[7] Copy constructor test (independence check):
+Original calendar:
+01.01.2025 : Year Start
+24.12.2025 : C
+01.01.2026 : Updated
+01.05.2026 : B
+15.05.2026 : A
+10.10.2026 : Final
+31.12.2026 : Year End
+Copied calendar:
+01.01.2025 : Year Start
+24.12.2025 : C
+01.01.2026 : Updated
+01.05.2026 : B
+15.05.2026 : A
+10.10.2026 : Final
+31.12.2026 : Year End
+30.06.2027 : Only in copy
+
+[8] Assignment operator test:
+01.01.2025 : Year Start
+24.12.2025 : C
+01.01.2026 : Updated
+01.05.2026 : B
+15.05.2026 : A
+10.10.2026 : Final
+31.12.2026 : Year End
+
+[9] Self-assignment test:
+01.01.2025 : Year Start
+24.12.2025 : C
+01.01.2026 : Updated
+01.05.2026 : B
+15.05.2026 : A
+10.10.2026 : Final
+31.12.2026 : Year End
+
+[10] Clear calendar:
+
+[11] Insert after clear:
+05.05.2027 : New Event
+
+[12] Double clear test:
+
+=== All tests completed successfully ===
