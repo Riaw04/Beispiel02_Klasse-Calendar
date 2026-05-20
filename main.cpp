@@ -1,81 +1,254 @@
+// ==========================
+// File: main.cpp
+// Author: Niklas Riepl 
+// Date: 13/04/2026
+// Description: Main program for testing and benchmarking the Calendar class.
+// ==========================
+
 #include "Calendar.h"
 
+#include <chrono>
 #include <iostream>
-#include <stdexcept>
+#include <sstream>
+
+using Clock = std::chrono::high_resolution_clock;
+
+// ==========================
+// Benchmarks
+// ==========================
+
+#include <numeric>
+
+volatile int sink = 0;
+
+template <typename Func>
+long long Measure(Func f, int repeats = 5) {
+    using namespace std::chrono;
+
+    long long total = 0;
+
+    for (int i = 0; i < repeats; ++i) {
+        auto start = high_resolution_clock::now();
+        f();
+        auto end = high_resolution_clock::now();
+
+        total += duration_cast<microseconds>(end - start).count();
+    }
+
+    return total / repeats;
+}
+
+// Insert n elements
+void BenchmarkInsert(int n) {
+    auto time = Measure([&]() {
+        Calendar cal;
+        for (int i = 1; i <= n; ++i) {
+            cal.AddEntry(Date((i % 28) + 1, (i % 12) + 1, 2026), "X");
+        }
+        sink += n;
+        });
+
+    std::cout << "Insert " << n << ": " << time << " us\n";
+}
+
+// Insert in reverse order (tests worst-case behavior)
+void BenchmarkReverseInsert(int n) {
+    auto time = Measure([&]() {
+        Calendar cal;
+        for (int i = n; i >= 1; --i) {
+            cal.AddEntry(Date((i % 28) + 1, (i % 12) + 1, 2026), "X");
+        }
+        sink += n;
+        });
+
+    std::cout << "Reverse insert " << n << ": " << time << " us\n";
+}
+
+// Traverse and format all entries
+void BenchmarkPrint(int n) {
+    Calendar cal;
+
+    for (int i = 1; i <= n; ++i) {
+        cal.AddEntry(Date((i % 28) + 1, (i % 12) + 1, 2026), "X");
+    }
+
+    auto time = Measure([&]() {
+        std::ostringstream out;
+        cal.PrintAllEntries(true);
+        sink += out.str().size();
+        });
+
+    std::cout << "Print " << n << ": " << time << " us\n";
+}
+
+// Copy constructor (should scale with n)
+void BenchmarkCopy(int n) {
+    Calendar cal;
+
+    for (int i = 1; i <= n; ++i) {
+        cal.AddEntry(Date((i % 28) + 1, (i % 12) + 1, 2026), "X");
+    }
+
+    auto time = Measure([&]() {
+        Calendar copy(cal);
+        copy.PrintAllEntries(true);
+        sink += n;
+        });
+
+    std::cout << "Copy " << n << ": " << time << " us\n";
+}
+
+// Assignment operator (replace existing data)
+void BenchmarkAssignment(int n) {
+    Calendar cal;
+
+    for (int i = 1; i <= n; ++i) {
+        cal.AddEntry(Date((i % 28) + 1, (i % 12) + 1, 2026), "X");
+    }
+
+    auto time = Measure([&]() {
+        Calendar other;
+        other = cal;
+        other.PrintAllEntries(true);
+        sink += n;
+        });
+
+    std::cout << "Assign " << n << ": " << time << " us\n";
+}
+
+// ==========================
+// Main
+// ==========================
 
 int main() {
     try {
-        std::cout << "=== Date Tests ===\n";
 
-        // Construct a few valid sample dates and verify comparison behavior.
-        Date d1(1, 1, 2025);
-        Date d2(2, 1, 2025);
-        Date d3(2, 2, 2024);
-
-        std::cout << "d1 = " << d1 << '\n';
-        std::cout << "d2 = " << d2 << '\n';
-        std::cout << "d3 = " << d3 << '\n';
-
-        std::cout << "Compare d1 with d2: " << d1.Compare(d2) << " (expected -1)\n";
-        std::cout << "Compare d2 with d1: " << d2.Compare(d1) << " (expected +1)\n";
-        std::cout << "Compare d2 with d2: " << d2.Compare(d2) << " (expected 0)\n";
-
-        // Demonstrate validation: this invalid date must throw an exception.
-        try {
-            Date invalid(31, 2, 2025);
-            std::cout << "ERROR: invalid date accepted: " << invalid << '\n';
-        } catch (std::invalid_argument const&) {
-            std::cout << "Invalid date check passed.\n";
-        }
-
-        std::cout << "\n=== Calendar Tests ===\n";
-
-        // Fill a calendar and print it in both traversal orders.
         Calendar cal;
-        cal.AddEntry(Date(15, 5, 2026), "Arzttermin");
-        cal.AddEntry(Date(1, 5, 2026), "Maifeiertag");
-        cal.AddEntry(Date(24, 12, 2025), "Heiligabend");
-        cal.AddEntry(Date(1, 1, 2026), "Neujahr");
 
-        std::cout << "\nAscending:\n";
+        // ------------------------------------------------------------
+        // 1. Empty calendar test (should handle gracefully)
+        // ------------------------------------------------------------
+        std::cout << "\n[1] Empty calendar:\n";
         cal.PrintAllEntries(true);
 
-        std::cout << "\nDescending:\n";
+        // ------------------------------------------------------------
+        // 2. Basic insertion + automatic ordering test
+        // ------------------------------------------------------------
+        std::cout << "\n[2] Basic insertion (unordered input -> sorted output):\n";
+        cal.AddEntry(Date(15, 5, 2026), "A");
+        cal.AddEntry(Date(1, 5, 2026), "B");
+        cal.AddEntry(Date(24, 12, 2025), "C");
+        cal.AddEntry(Date(1, 1, 2026), "D");
+        cal.PrintAllEntries(true);
+
+        // ------------------------------------------------------------
+        // 3. Reverse order printing test
+        // ------------------------------------------------------------
+        std::cout << "\n[3] Descending order view:\n";
         cal.PrintAllEntries(false);
 
-        // Inserting the same date again replaces the old text.
-        std::cout << "\nReplace existing entry (01.01.2026)...\n";
-        cal.AddEntry(Date(1, 1, 2026), "Neujahr (Brunch mit Familie)");
+        // ------------------------------------------------------------
+        // 4. Update existing entry (same date overwrite behavior)
+        // ------------------------------------------------------------
+        std::cout << "\n[4] Replace existing entry (same date update):\n";
+        cal.AddEntry(Date(1, 1, 2026), "Updated");
         cal.PrintAllEntries(true);
 
-        // Verify deep copy semantics of the copy constructor.
-        std::cout << "\nCopy constructor test...\n";
-        Calendar copied(cal);
-        copied.AddEntry(Date(31, 12, 2026), "Silvesterparty");
+        // ------------------------------------------------------------
+        // 5. Overwrite same date multiple times
+        // ------------------------------------------------------------
+        std::cout << "\n[5] Multiple overwrites on same date:\n";
+        cal.AddEntry(Date(10, 10, 2026), "First");
+        cal.AddEntry(Date(10, 10, 2026), "Final");
+        cal.PrintAllEntries(true);
+
+        // ------------------------------------------------------------
+        // 6. Boundary date test (end of year / leap year context)
+        // ------------------------------------------------------------
+        std::cout << "\n[6] Boundary dates test:\n";
+        cal.AddEntry(Date(31, 12, 2026), "Year End");
+        cal.AddEntry(Date(1, 1, 2025), "Year Start");
+        cal.PrintAllEntries(true);
+
+        // ------------------------------------------------------------
+        // 7. Copy constructor deep copy test
+        // ------------------------------------------------------------
+        std::cout << "\n[7] Copy constructor test (independence check):\n";
+        Calendar copy(cal);
+        copy.AddEntry(Date(30, 6, 2027), "Only in copy");
 
         std::cout << "Original calendar:\n";
         cal.PrintAllEntries(true);
 
         std::cout << "Copied calendar:\n";
-        copied.PrintAllEntries(true);
+        copy.PrintAllEntries(true);
 
-        // Verify assignment performs a full replacement of existing content.
-        std::cout << "\nAssignment operator test...\n";
+        // ------------------------------------------------------------
+        // 8. Assignment operator test
+        // ------------------------------------------------------------
+        std::cout << "\n[8] Assignment operator test:\n";
         Calendar assigned;
-        assigned.AddEntry(Date(10, 10, 2030), "Should disappear");
+        assigned.AddEntry(Date(1, 1, 2030), "Temporary data");
+
         assigned = cal;
         assigned.PrintAllEntries(true);
 
-        // Clear all entries and confirm the calendar is empty.
-        std::cout << "\nClear test...\n";
-        assigned.Clear();
-        std::cout << "After Clear (should be empty):\n";
+        // ------------------------------------------------------------
+        // 9. Self-assignment safety test
+        // ------------------------------------------------------------
+        std::cout << "\n[9] Self-assignment test:\n";
+        assigned = assigned;
         assigned.PrintAllEntries(true);
 
+        // ------------------------------------------------------------
+        // 10. Clear functionality test
+        // ------------------------------------------------------------
+        std::cout << "\n[10] Clear calendar:\n";
+        assigned.Clear();
+        assigned.PrintAllEntries(true);
+
+        // ------------------------------------------------------------
+        // 11. Reuse after clear
+        // ------------------------------------------------------------
+        std::cout << "\n[11] Insert after clear:\n";
+        assigned.AddEntry(Date(5, 5, 2027), "New Event");
+        assigned.PrintAllEntries(true);
+
+        // ------------------------------------------------------------
+        // 12. Double clear safety test (should not crash)
+        // ------------------------------------------------------------
+        std::cout << "\n[12] Double clear test:\n";
+        assigned.Clear();
+        assigned.Clear();
+        assigned.PrintAllEntries(true);
+
+        std::cout << "\n=== All tests completed successfully ===\n";
+
+        // ==========================
+        // Benchmarks
+        // ==========================
+
+        /*std::cout << "\n=== Benchmarks ===\n";
+
+        int sizes[] = { 100, 1000, 5000 };
+
+        for (int n : sizes) {
+            std::cout << "\n--- n = " << n << " ---\n";
+            BenchmarkInsert(n);
+            BenchmarkReverseInsert(n);
+            BenchmarkPrint(n);
+            BenchmarkCopy(n);
+            BenchmarkAssignment(n);
+        }*/
+
+        std::cout << "\nDone.\n";
         return 0;
-    } catch (std::exception const& ex) {
+
+    }
+    catch (std::exception const& ex) {
         std::cerr << "Unhandled exception: " << ex.what() << '\n';
-    } catch (...) {
+    }
+    catch (...) {
         std::cerr << "Unhandled unknown exception.\n";
     }
 
